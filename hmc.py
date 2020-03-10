@@ -14,9 +14,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('mlp_hidden_size', 1024, 
                      'Number of output dimensions for MLP')
 flags.DEFINE_float('Lambda', 0.5, 
-                     'Number of output dimensions for MLP')
+                     'loss parameter for L2')
 flags.DEFINE_float('Beta', 0.5, 
-                     'Number of output dimensions for MLP')
+                     'loss parameter for L2-L1')
+flags.DEFINE_float('mask_value', -100, 
+                     'mask_value for L2 classification')
 
 class HMC(nn.Module):
     """A classifier for Hierarchical multi-label classification"""
@@ -26,7 +28,8 @@ class HMC(nn.Module):
                  L1_labels_num,
                  L2_labels_num,
                  L12_table,
-                 mlp_hidden_size=None):
+                 mlp_hidden_size=None,
+                 mask_value=None):
         """Construct a classifier for HMC
 
         Args:
@@ -37,11 +40,13 @@ class HMC(nn.Module):
             L12_table: A list of some lists.
                        For example, L12_table[i][j] is a number, which means 
                        that L12_table[i][j](L2 label number) belongs to i(L1 label)
+            mask_value: a float number which make exp(mask_value) close to zero
         """
 
         super(HMC, self).__init__()
 
         self.mlp_hidden_size = mlp_hidden_size or FLAGS.mlp_hidden_size
+        self.mask_value = mask_value or FLAGS.mask_value
         self.feature_size = feature_size
         self.L1_labels_num = L1_labels_num
         self.L2_labels_num = L2_labels_num
@@ -83,7 +88,7 @@ class HMC(nn.Module):
         L2 = F.relu(self.fc_L2_2(L2))
 
         L1_label = L1.argmax(dim=1)
-        mask = torch.ones_like(L2) * -1e9
+        mask = torch.ones_like(L2) * self.mask_value
 
         """for-loop may be not a good choice.
         But I don't have any other methods
