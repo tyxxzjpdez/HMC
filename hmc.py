@@ -41,14 +41,14 @@ class HMC(nn.Module):
 
         super(HMC, self).__init__()
 
-        assert len(L12_table ) == L1_label_num
-        assert check_L12_table(L12_table)
-
         self.mlp_hidden_size = mlp_hidden_size or FLAGS.mlp_hidden_size
         self.feature_size = feature_size
         self.L1_labels_num = L1_labels_num
         self.L2_labels_num = L2_labels_num
         self.L12_table = L12_table
+
+        assert len(L12_table) == L1_labels_num
+        assert self.check_L12_table(L12_table)
 
         self.fc_L1_1 = nn.Linear(self.feature_size, self.mlp_hidden_size)
         self.fc_L1_2 = nn.Linear(self.mlp_hidden_size, self.L1_labels_num)
@@ -66,7 +66,7 @@ class HMC(nn.Module):
                 return False
         return True
 
-    def forword(self,x):
+    def forward(self,x):
         """forward computation
 
         Args:
@@ -90,7 +90,7 @@ class HMC(nn.Module):
         """
         for i,element in enumerate(L1_label):
             idx = element.item()
-            mask[i,L12_table[idx]]=0
+            mask[i,self.L12_table[idx]]=0
 
         L2 += mask
         L2 = F.softmax(L2,dim=1)
@@ -120,11 +120,13 @@ def hmc_loss(L1,L2,L1_gt,L2_gt,Lambda,Beta):
     return L1_loss + Lambda * L2_loss + beta * LH_loss 
 
 def main(argv):
-  del argv  # Unused.
+  # del argv  # Unused.
 
-  print('Running under Python {0[0]}.{0[1]}.{0[2]}'.format(sys.version_info),
-        file=sys.stderr)
-  logging.info('echo is %s.', FLAGS.echo)
+  # print('Running under Python {0[0]}.{0[1]}.{0[2]}'.format(sys.version_info),
+  #       file=sys.stderr)
+  # logging.info('echo is %s.', FLAGS.echo)
+  model = HMC(1024,5,7,[[0],[2,3,4],[5],[6],[1]])
+  print(model(torch.rand(10,1024)))
 
 
 if __name__ == '__main__':
