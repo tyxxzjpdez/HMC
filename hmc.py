@@ -97,7 +97,7 @@ class HMC(nn.Module):
 
         return L1,L2
 
-def hmc_loss(L1,L2,L1_gt,L2_gt,Lambda,Beta):
+def hmc_loss(L1,L2,L1_gt,L2_gt,Lambda=None,Beta=None):
     """calculate hmc loss
 
     Args:
@@ -109,26 +109,37 @@ def hmc_loss(L1,L2,L1_gt,L2_gt,Lambda,Beta):
         Beta: a float coefficient for L2-L1 loss pernelty
     """
 
+    Lambda = Lambda or FLAGS.Lambda
+    Beta = Beta or FLAGS.Beta
+
     batch_num = L1.shape[0]
     Y1 = L1[torch.arange(batch_num),L1_gt]
     Y2 = L2[torch.arange(batch_num),L2_gt]
 
     L1_loss = - Y1.log().mean()
     L2_loss = - Y2.log().mean()
-    LH_loss = torch.max(Y2-Y1,torch.zeros_like(Y1))
+    LH_loss = torch.max(Y2-Y1,torch.zeros_like(Y1)).mean()
     
-    return L1_loss + Lambda * L2_loss + beta * LH_loss 
+    return L1_loss + Lambda * L2_loss + Beta * LH_loss 
 
 def main(argv):
-  # del argv  # Unused.
-
-  # print('Running under Python {0[0]}.{0[1]}.{0[2]}'.format(sys.version_info),
-  #       file=sys.stderr)
-  # logging.info('echo is %s.', FLAGS.echo)
-  model = HMC(1024,5,7,[[0],[2,3,4],[5],[6],[1]])
-  print(model(torch.rand(10,1024)))
+    # del argv  # Unused.
+   
+    # print('Running under Python {0[0]}.{0[1]}.{0[2]}'.format(sys.version_info),
+    #       file=sys.stderr)
+    # logging.info('echo is %s.', FLAGS.echo)
+    model = HMC(1024,5,7,[[0],[2,3,4],[5],[6],[1]])
+    L1,L2 = model(torch.rand(3,1024))
+    L1_gt=torch.Tensor(
+        [0,1,1]
+    ).long()
+    L2_gt=torch.Tensor(
+        [0,2,4]
+    ).long()
+    loss = hmc_loss(L1,L2,L1_gt,L2_gt)
+    print(loss)
 
 
 if __name__ == '__main__':
-  app.run(main)
+    app.run(main)
 
